@@ -91,20 +91,32 @@ namespace AdresLib
             using (var conn = GetConnection())
             {
                 conn.Open();
-                var id = conn.ExecuteScalar<long>(sql, new
+                var trans = conn.BeginTransaction();
+                try
                 {
-                    adquisicion.ProveedorId,
-                    adquisicion.ServicioId,
-                    adquisicion.UnidadId,
-                    adquisicion.Presupuesto,
-                    adquisicion.Cantidad,
-                    adquisicion.ValorUnitario,
-                    adquisicion.FechaAdquisicion,
-                    adquisicion.Comentario
-                });
+                    
+                    var id = conn.ExecuteScalar<long>(sql, new
+                    {
+                        adquisicion.ProveedorId,
+                        adquisicion.ServicioId,
+                        adquisicion.UnidadId,
+                        adquisicion.Presupuesto,
+                        adquisicion.Cantidad,
+                        adquisicion.ValorUnitario,
+                        adquisicion.FechaAdquisicion,
+                        adquisicion.Comentario
+                    });
 
-                adquisicion.Id = id;
-                AdquisicionHistoriaAdicionar(null, adquisicion, Accion.Adicionar, conn);
+                    adquisicion.Id = id;
+                    AdquisicionHistoriaAdicionar(null, adquisicion, Accion.Adicionar, conn);
+                    trans.Commit();
+                }
+                catch (Exception)
+                {
+                    trans.Rollback();
+                    throw;
+                }
+                
             }
         }
         /// <summary>
@@ -119,8 +131,7 @@ namespace AdresLib
         {
             
             AdquisicionExtra adquisicionAnterior = AdquisicionesRecuperar(adquisicion.Id.Value);
-            
-
+           
             AdresServiceUtil.AdquisicionValidar(adquisicion, Accion.Modificar);
 
             const string sql = @"
@@ -138,22 +149,32 @@ namespace AdresLib
             using (var conn = GetConnection())
             {
                 
-
                 conn.Open();
-                conn.Execute(sql, new
+                var trans = conn.BeginTransaction();
+                try
                 {
-                    adquisicion.ProveedorId,
-                    adquisicion.ServicioId,
-                    adquisicion.UnidadId,
-                    adquisicion.Presupuesto,
-                    adquisicion.Cantidad,
-                    adquisicion.ValorUnitario,
-                    adquisicion.FechaAdquisicion,
-                    adquisicion.Comentario,
-                    adquisicion.Id
-                });
+                    conn.Execute(sql, new
+                    {
+                        adquisicion.ProveedorId,
+                        adquisicion.ServicioId,
+                        adquisicion.UnidadId,
+                        adquisicion.Presupuesto,
+                        adquisicion.Cantidad,
+                        adquisicion.ValorUnitario,
+                        adquisicion.FechaAdquisicion,
+                        adquisicion.Comentario,
+                        adquisicion.Id
+                    });
 
-                AdquisicionHistoriaAdicionar(adquisicionAnterior, adquisicion, Accion.Modificar, conn);
+                    AdquisicionHistoriaAdicionar(adquisicionAnterior, adquisicion, Accion.Modificar, conn);
+                    trans.Commit();
+                }
+                catch (Exception)
+                {
+                    trans.Rollback();
+                    throw;
+                }
+                
             }
         }
 
@@ -173,9 +194,19 @@ namespace AdresLib
             using (var conn = GetConnection())
             {
                 conn.Open();
-                conn.Execute(sql, new { Id = id });
+                var trans = conn.BeginTransaction();
+                try
+                {
+                    conn.Execute(sql, new { Id = id });
 
-                AdquisicionHistoriaAdicionar(adquisicionAnterior, null, Accion.Eliminar, conn);
+                    AdquisicionHistoriaAdicionar(adquisicionAnterior, null, Accion.Eliminar, conn);
+                    trans.Commit();
+                }
+                catch (Exception)
+                {
+                    trans.Rollback();
+                    throw;
+                }
             }
         }
         #endregion
